@@ -42,6 +42,10 @@ export default function LoginView() {
     } finally {
       setLoading(false);
     }
+    if (profileError || !profile) {
+  console.error("Profile Fetch Error Details:", profileError); // Add this log!
+  throw new Error("This email is not registered in our database. Please contact your system administrator.");
+}
   };
 
   return (
