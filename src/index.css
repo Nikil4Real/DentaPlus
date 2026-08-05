@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  body {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Purple Accent Utilities */
+.bg-purple-accent {
+  background-color: #7C3AED;
+}
+
+.bg-purple-hover:hover {
+  background-color: #9333EA;
+}
+
+.text-purple-accent {
+  color: #A855F7;
+}
+
+.border-purple-accent {
+  border-color: #7C3AED;
+}
+
+/* Ambient Glow Effects */
+.purple-glow {
+  box-shadow: 0 0 25px -5px rgba(124, 58, 237, 0.35);
+}
+
+.purple-glow-sm {
+  box-shadow: 0 0 12px -2px rgba(124, 58, 237, 0.25);
+}
+
+.purple-gradient-card {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.purple-glass {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0F172A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7C3AED;
+}

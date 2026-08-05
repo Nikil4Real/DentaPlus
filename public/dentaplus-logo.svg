@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="toothGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="60%" stop-color="#C4B5FD" />
+      <stop offset="100%" stop-color="#8B5CF6" />
+    </linearGradient>
+    <linearGradient id="plusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#6D28D9" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#4C1D95" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Tooth Body with rounded roots and crown -->
+  <g filter="url(#shadow)">
+    <!-- Outer thick purple border tooth -->
+    <path d="M 230,105 
+             C 180,90 140,115 130,170 
+             C 120,220 140,280 170,335 
+             C 185,360 205,375 220,345 
+             C 230,325 235,300 245,280 
+             C 255,300 260,325 270,345 
+             C 285,375 305,360 320,335 
+             C 350,280 370,220 360,170 
+             C 350,135 325,120 295,145 
+             C 275,160 250,120 230,105 Z" 
+          fill="url(#toothGradient)" 
+          stroke="#3B0764" 
+          stroke-width="26" 
+          stroke-linejoin="round" 
+          stroke-linecap="round"/>
+
+    <!-- Soft inner contour highlight -->
+    <path d="M 230,125 C 195,115 160,135 152,175 C 145,215 160,265 185,310 C 195,330 208,340 218,320 C 228,300 232,275 245,255 C 258,275 262,300 272,320 C 282,340 295,330 305,310 C 330,265 345,215 338,175 C 332,145 312,135 288,155" 
+          fill="none" 
+          stroke="#4C1D95" 
+          stroke-width="10" 
+          opacity="0.8"/>
+
+    <!-- Plus Symbol in Top-Right -->
+    <g transform="translate(295, 80)">
+      <rect x="25" y="0" width="38" height="90" rx="19" fill="url(#plusGradient)" stroke="#3B0764" stroke-width="12" />
+      <rect x="0" y="25" width="90" height="38" rx="19" fill="url(#plusGradient)" stroke="#3B0764" stroke-width="12" />
+    </g>
+  </g>
+
+  <!-- Typography -->
+  <text x="250" y="430" text-anchor="middle" font-family="'Poppins', 'Segoe UI', sans-serif" font-weight="800" font-size="58" letter-spacing="-1">
+    <tspan fill="#3B0764">Denta</tspan><tspan fill="#7C3AED">Plus</tspan>
+  </text>
+
+  <text x="250" y="465" text-anchor="middle" font-family="'Poppins', 'Segoe UI', sans-serif" font-weight="600" font-size="20" fill="#4C1D95" letter-spacing="-0.2">
+    Dental EMR &amp; Practice Management Software
+  </text>
+</svg>

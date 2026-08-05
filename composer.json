@@ -1,0 +1,14 @@
+{
+    "name": "dentaplus/passwordless-otp-login",
+    "description": "Secure 2-Step Passwordless Email OTP Login System for DentaPlus Portal",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "phpmailer/phpmailer": "^6.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    }
+}

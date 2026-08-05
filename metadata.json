@@ -1,0 +1,8 @@
+{
+  "name": "DentaPlus",
+  "description": "Dental EMR & Practice Management Software",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
