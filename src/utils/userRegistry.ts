@@ -52,3 +52,7 @@ export const getUserByEmail = (email: string): RegisteredClinicUser | undefined 
     (u) => u.email.toLowerCase() === email.toLowerCase()
   );
 };
+
+export const findUserByEmail = (email: string): RegisteredClinicUser | undefined => {
+  return getUserByEmail(email);
+};
