@@ -1,3 +1,6 @@
+export function LoginView() {
+}
+
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient'; // Import your Supabase client
 
