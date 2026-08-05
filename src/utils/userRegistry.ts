@@ -1,12 +1,14 @@
-export interface UserRecord {
+export interface RegisteredClinicUser {
   id: string;
   name: string;
   email: string;
   role: string;
   is_active: boolean;
+  department?: string;
+  createdAt?: string;
 }
 
-export const REGISTERED_USERS: UserRecord[] = [
+export const REGISTERED_USERS: RegisteredClinicUser[] = [
   {
     id: 'super-admin-1',
     name: 'Super Admin',
@@ -16,11 +18,36 @@ export const REGISTERED_USERS: UserRecord[] = [
   },
 ];
 
-export const isEmailRegistered = (email: string): boolean => {
-  return true; // Allows login attempts to proceed to Supabase check
+export const getRegisteredUsers = (): RegisteredClinicUser[] => {
+  return REGISTERED_USERS;
 };
 
-export const getUserByEmail = (email: string): UserRecord | undefined => {
+export const registerClinicUser = (user: Partial<RegisteredClinicUser>): RegisteredClinicUser => {
+  const newUser: RegisteredClinicUser = {
+    id: user.id || `user-${Date.now()}`,
+    name: user.name || '',
+    email: user.email || '',
+    role: user.role || 'Admin',
+    is_active: user.is_active ?? true,
+    department: user.department,
+    createdAt: new Date().toISOString(),
+  };
+  REGISTERED_USERS.push(newUser);
+  return newUser;
+};
+
+export const deleteRegisteredUser = (id: string): void => {
+  const index = REGISTERED_USERS.findIndex((u) => u.id === id);
+  if (index !== -1) {
+    REGISTERED_USERS.splice(index, 1);
+  }
+};
+
+export const isEmailRegistered = (email: string): boolean => {
+  return true;
+};
+
+export const getUserByEmail = (email: string): RegisteredClinicUser | undefined => {
   return REGISTERED_USERS.find(
     (u) => u.email.toLowerCase() === email.toLowerCase()
   );
