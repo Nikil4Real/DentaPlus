@@ -30,7 +30,7 @@ import { NewPrescriptionModal } from './components/NewPrescriptionModal';
 import { FollowUpModal } from './components/FollowUpModal';
 import { DoctorModal } from './components/DoctorModal';
 
-import { LoginView } from './views/LoginView';
+import LoginView from './views/LoginView';
 import { DashboardView } from './views/DashboardView';
 import { PatientsView } from './views/PatientsView';
 import { AppointmentsView } from './views/AppointmentsView';

@@ -5,6 +5,7 @@ export interface RegisteredClinicUser {
   role: string;
   is_active: boolean;
   department?: string;
+  clinicName?: string;
   createdAt?: string;
 }
 
@@ -44,7 +45,7 @@ export const deleteRegisteredUser = (id: string): void => {
 };
 
 export const isEmailRegistered = (email: string): boolean => {
-  return true;
+  return REGISTERED_USERS.some((u) => u.email.toLowerCase() === email.toLowerCase());
 };
 
 export const getUserByEmail = (email: string): RegisteredClinicUser | undefined => {
