@@ -40,6 +40,7 @@ import { PharmacyView } from './views/PharmacyView';
 import { BillingView } from './views/BillingView';
 import { SettingsView } from './views/SettingsView';
 import { getClinicIdFromEmail, loadClinicData, saveClinicDataField } from './utils/clinicStore';
+import { fetchClinicInfo, saveClinicInfo } from './utils/clinicApi';
 import { findUserByEmail } from './utils/userRegistry';
 
 export default function App() {
@@ -78,6 +79,21 @@ export default function App() {
       setPharmacy(data.pharmacy);
       setInvoices(data.invoices);
       setPrescriptions(data.prescriptions);
+
+      let isMounted = true;
+      fetchClinicInfo()
+        .then((remoteClinicInfo) => {
+          if (remoteClinicInfo && isMounted) {
+            setClinicInfo(remoteClinicInfo);
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load remote clinic info:', err);
+        });
+
+      return () => {
+        isMounted = false;
+      };
     }
   }, [currentUser, currentClinicId]);
 
@@ -134,6 +150,11 @@ export default function App() {
     setClinicInfo(updated);
     if (currentUser) {
       saveClinicDataField(currentClinicId, 'clinicInfo', updated);
+      if (currentUser.role === 'Super Admin') {
+        saveClinicInfo(updated).catch((err) => {
+          console.error('Failed to save clinic info to server:', err);
+        });
+      }
     }
   };
 

@@ -149,20 +149,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <Building2 className="w-5 h-5 text-purple-400" /> Clinic &amp; Hospital Identity
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isAdmin 
+                {isSuperAdmin 
                   ? 'Update dental clinic name, tagline, address, contact details, and custom logo.'
-                  : `Read-only view for ${currentRole} role. Clinic identity can be modified by Admin or Super Admin.`}
+                  : `Read-only view for ${currentRole} role. Clinic identity can only be modified by Super Admin.`}
               </p>
             </div>
-            {!isAdmin && (
+            {!isSuperAdmin && (
               <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-amber-400" /> Restricted to Admin
+                <Lock className="w-3.5 h-3.5 text-amber-400" /> Restricted to Super Admin
               </span>
             )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <fieldset disabled={!isAdmin} className="space-y-4 disabled:opacity-80">
+            <fieldset disabled={!isSuperAdmin} className="space-y-4 disabled:opacity-80">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
               {/* Name */}
@@ -270,7 +270,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <label className="block text-xs font-semibold text-slate-300">
                     Clinic Logo Image
                   </label>
-                  {isAdmin && (
+                  {isSuperAdmin && (
                     <button
                       type="button"
                       onClick={() => setShowUrlInput(!showUrlInput)}
@@ -291,7 +291,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onChange={handleFileChange}
                 />
 
-                {showUrlInput && isAdmin ? (
+                {showUrlInput && isSuperAdmin ? (
                   <div className="flex gap-2">
                     <input
                       type="url"
@@ -328,7 +328,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           </div>
                         </div>
 
-                        {isAdmin && (
+                        {isSuperAdmin && (
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
@@ -350,12 +350,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     ) : (
                       <div
-                        onDragOver={isAdmin ? handleDragOver : undefined}
-                        onDragLeave={isAdmin ? handleDragLeave : undefined}
-                        onDrop={isAdmin ? handleDrop : undefined}
-                        onClick={isAdmin ? () => fileInputRef.current?.click() : undefined}
+                        onDragOver={isSuperAdmin ? handleDragOver : undefined}
+                        onDragLeave={isSuperAdmin ? handleDragLeave : undefined}
+                        onDrop={isSuperAdmin ? handleDrop : undefined}
+                        onClick={isSuperAdmin ? () => fileInputRef.current?.click() : undefined}
                         className={`group relative border-2 border-dashed rounded-2xl p-5 text-center transition-all ${
-                          isAdmin ? 'cursor-pointer hover:border-purple-500/60 hover:bg-slate-950' : 'cursor-not-allowed opacity-75'
+                          isSuperAdmin ? 'cursor-pointer hover:border-purple-500/60 hover:bg-slate-950' : 'cursor-not-allowed opacity-75'
                         } ${
                           isDragging
                             ? 'border-[#7C3AED] bg-[#7C3AED]/10 scale-[1.01]'
@@ -368,7 +368,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           </div>
                           <div>
                             <p className="text-xs font-bold text-white">
-                              {isAdmin ? 'Click to upload clinic logo' : 'Default emblem active'} <span className="text-purple-400 font-normal">{isAdmin ? 'or drag & drop' : ''}</span>
+                              {isSuperAdmin ? 'Click to upload clinic logo' : 'Default emblem active'} <span className="text-purple-400 font-normal">{isSuperAdmin ? 'or drag & drop' : ''}</span>
                             </p>
                             <p className="text-[10px] text-slate-400 mt-0.5">
                               Supports PNG, JPG, WEBP, SVG
@@ -388,7 +388,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             {/* Save Button */}
-            {isAdmin && (
+            {isSuperAdmin && (
               <div className="pt-3 border-t border-purple-900/30 flex items-center justify-between">
                 <div className="text-xs text-slate-400">
                   All changes sync automatically across invoices, headers, and reports.
