@@ -22,7 +22,7 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
     setLoading(true);
 
     try {
-      const res = await fetch('/src/components/LoginOtp.jsx', {
+      const res = await fetch('/api/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
