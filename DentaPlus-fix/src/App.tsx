@@ -81,7 +81,7 @@ export default function App() {
       setInvoices(data.invoices);
       setPrescriptions(data.prescriptions);
       // Load clinicInfo from Supabase (single source of truth)
-      fetchClinicInfoWithId().then((result) => {
+      fetchClinicInfoWithId(currentUser.email).then((result) => {
         if (result) {
           setClinicInfo(result.info);
           setClinicInfoRowId(result.id);

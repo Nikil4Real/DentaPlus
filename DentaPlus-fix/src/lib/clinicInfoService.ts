@@ -1,90 +1,79 @@
 // src/lib/clinicInfoService.ts
-// Reads and writes clinic_info rows for the currently logged-in user.
+// Reads and writes clinic_info rows, scoped to the logged-in user's clinic.
 //
-// Architecture (multi-tenant):
-//   profiles  ──(owner_id)──►  clinic_info
+// IMPORTANT — auth model:
+//   This app uses CUSTOM JWTs (lib/auth.js) stored in an httpOnly cookie,
+//   NOT Supabase Auth sessions. This means:
+//     - supabase.auth.getUser()  → always returns null (no Supabase session)
+//     - auth.uid()               → null in RLS (Supabase doesn't know the user)
+//   The user's identity is known only to the server-side API routes (api/me.js).
+//   The frontend receives the user object from App.tsx state after login.
 //
-// Each clinic_info row has an owner_id = profiles.id of its Super Admin.
-// Staff who are NOT Super Admins (Admin, Doctor, Receptionist, etc.) can
-// READ their clinic's row because they share the same owner_id — which is
-// resolved by looking up their profile's clinic association.
-//
-// RLS on clinic_info enforces this at the database level; the frontend
-// queries here are the matching JS layer.
+// Architecture:
+//   READS  → frontend uses anon key + .eq('owner_id', resolvedId)
+//            RLS allows all selects; the filter enforces isolation in JS.
+//   WRITES → go through /api/update-clinic-info (service role key, bypasses RLS)
+//            This is the ONLY safe way to write since we have no Supabase session.
 
 import { supabase } from './supabaseClient';
 import { ClinicInfo } from '../types';
 
 // ---------------------------------------------------------------------------
-// Shape mappers
+// Shape mappers (camelCase ↔ snake_case)
 // ---------------------------------------------------------------------------
-function fromRow(row: Record<string, string>): ClinicInfo {
+function fromRow(row: Record<string, unknown>): ClinicInfo {
   return {
-    name:            row.name             ?? '',
-    tagline:         row.tagline          ?? '',
-    licenseCode:     row.license_code     ?? '',
-    panNumber:       row.pan_number       ?? '',
-    address:         row.address          ?? '',
-    phone:           row.phone            ?? '',
-    email:           row.email            ?? '',
-    logoUrl:         row.logo_url         ?? '',
-    establishedYear: row.established_year ?? '',
-  };
-}
-
-function toRow(info: ClinicInfo) {
-  return {
-    name:             info.name,
-    tagline:          info.tagline,
-    license_code:     info.licenseCode,
-    pan_number:       info.panNumber,
-    address:          info.address,
-    phone:            info.phone,
-    email:            info.email,
-    logo_url:         info.logoUrl,
-    established_year: info.establishedYear,
+    name:            String(row.name            ?? ''),
+    tagline:         String(row.tagline         ?? ''),
+    licenseCode:     String(row.license_code    ?? ''),
+    panNumber:       String(row.pan_number      ?? ''),
+    address:         String(row.address         ?? ''),
+    phone:           String(row.phone           ?? ''),
+    email:           String(row.email           ?? ''),
+    logoUrl:         String(row.logo_url        ?? ''),
+    establishedYear: String(row.established_year ?? ''),
   };
 }
 
 // ---------------------------------------------------------------------------
-// Step 1: Resolve which clinic_info row belongs to the logged-in user.
+// Resolve owner_id from the user's email.
 //
-// For a Super Admin: their own profiles.id IS the owner_id.
-// For other roles:   they need a clinic_id column on profiles pointing to
-//                    the clinic they belong to (future enhancement).
-//                    For now we resolve by matching email domain so all
-//                    staff at the same clinic share one row.
+// For Super Admin: their profiles.id is the owner_id directly.
+// For other roles: find the Super Admin in the same email domain.
+//
+// The userEmail comes from App.tsx state (set after OTP login) — NOT from
+// supabase.auth.getUser() which would return null.
 // ---------------------------------------------------------------------------
-async function resolveOwnerIdForCurrentUser(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return null;
+async function resolveOwnerIdFromEmail(userEmail: string): Promise<string | null> {
+  const email = userEmail.trim().toLowerCase();
 
-  // Fetch the current user's profile
-  const { data: profile } = await supabase
+  // First: check if this user IS a Super Admin and has a clinic row directly
+  const { data: ownRow } = await supabase
     .from('profiles')
-    .select('id, role, email')
-    .eq('email', user.email.toLowerCase())
+    .select('id, role')
+    .eq('email', email)
     .maybeSingle();
 
-  if (!profile) return null;
+  if (!ownRow) return null;
 
-  // Super Admin: they own the clinic row directly
-  if (profile.role === 'Super Admin') return profile.id as string;
+  if (ownRow.role === 'Super Admin') {
+    // Super Admin owns a clinic row directly — their profile id IS the owner_id
+    return ownRow.id as string;
+  }
 
-  // Non-Super Admin: find the Super Admin in the same email domain
-  // (all staff from @familydental.com.np share the clinic owned by
-  //  the Super Admin whose email is also @familydental.com.np)
-  const domain = profile.email.split('@')[1];
+  // Non-Super Admin: find the Super Admin with the same email domain
+  // so all staff at familydental.com.np share that clinic's row
+  const domain = email.split('@')[1];
   if (!domain) return null;
 
-  const { data: ownerProfile } = await supabase
+  const { data: superAdmin } = await supabase
     .from('profiles')
     .select('id')
     .eq('role', 'Super Admin')
     .ilike('email', `%@${domain}`)
     .maybeSingle();
 
-  return (ownerProfile?.id as string) ?? null;
+  return superAdmin ? (superAdmin.id as string) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,12 +81,17 @@ async function resolveOwnerIdForCurrentUser(): Promise<string | null> {
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch the clinic_info row for the currently logged-in user's clinic.
- * Returns null if not found or user is not authenticated.
+ * Fetch the clinic_info row for the given user email.
+ * Pass currentUser.email from App.tsx state.
  */
-export async function fetchClinicInfoWithId(): Promise<{ info: ClinicInfo; id: string } | null> {
-  const ownerId = await resolveOwnerIdForCurrentUser();
-  if (!ownerId) return null;
+export async function fetchClinicInfoWithId(
+  userEmail: string
+): Promise<{ info: ClinicInfo; id: string } | null> {
+  const ownerId = await resolveOwnerIdFromEmail(userEmail);
+  if (!ownerId) {
+    console.warn('fetchClinicInfoWithId: could not resolve owner_id for', userEmail);
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('clinic_info')
@@ -112,66 +106,28 @@ export async function fetchClinicInfoWithId(): Promise<{ info: ClinicInfo; id: s
   if (!data) return null;
 
   return {
-    info: fromRow(data as Record<string, string>),
+    info: fromRow(data as Record<string, unknown>),
     id:   data.id as string,
   };
 }
 
 /**
- * Save (upsert) the clinic_info row for the current user.
- * RLS will reject the write if the caller is not a Super Admin.
- * Returns true on success, false on failure.
+ * Save clinic_info via the server-side API route (which uses the service role
+ * key and can write regardless of RLS). Returns true on success.
  */
-export async function saveClinicInfo(info: ClinicInfo, rowId?: string): Promise<boolean> {
-  const ownerId = await resolveOwnerIdForCurrentUser();
-  if (!ownerId) return false;
-
-  const payload = {
-    ...(rowId ? { id: rowId } : {}),
-    ...toRow(info),
-    owner_id: ownerId,
-  };
-
-  const { error } = await supabase
-    .from('clinic_info')
-    .upsert(payload, { onConflict: 'id' });
-
-  if (error) {
-    console.error('saveClinicInfo error:', error.message);
-    return false;
-  }
-  return true;
-}
-
-/**
- * Create a brand-new clinic_info row for a Super Admin who has none yet.
- * Called automatically after a new Super Admin registers.
- */
-export async function createClinicInfoIfMissing(
-  ownerId: string,
-  defaults: Partial<ClinicInfo> = {}
+export async function saveClinicInfo(
+  info: ClinicInfo,
+  rowId: string
 ): Promise<boolean> {
-  const { data: existing } = await supabase
-    .from('clinic_info')
-    .select('id')
-    .eq('owner_id', ownerId)
-    .maybeSingle();
-
-  if (existing) return true; // already exists, nothing to do
-
-  const { error } = await supabase.from('clinic_info').insert({
-    owner_id:    ownerId,
-    name:        defaults.name        ?? 'My Dental Clinic',
-    tagline:     defaults.tagline     ?? '',
-    address:     defaults.address     ?? '',
-    phone:       defaults.phone       ?? '',
-    email:       defaults.email       ?? '',
-    logo_url:    defaults.logoUrl     ?? '',
-    established_year: defaults.establishedYear ?? '',
+  const res = await fetch('/api/update-clinic-info', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: rowId, ...info }),
   });
 
-  if (error) {
-    console.error('createClinicInfoIfMissing error:', error.message);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('saveClinicInfo error:', err);
     return false;
   }
   return true;
