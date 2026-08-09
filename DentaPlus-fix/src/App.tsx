@@ -342,7 +342,6 @@ export default function App() {
           {activeTab === 'settings' && (
             <SettingsView
               currentRole={currentRole}
-              setCurrentRole={setCurrentRole}
               clinicInfo={clinicInfo}
               onUpdateClinicInfo={handleUpdateClinicInfo}
             />

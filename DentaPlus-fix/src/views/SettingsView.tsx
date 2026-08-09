@@ -1,70 +1,35 @@
-import React, { useState, useRef } from 'react';
-import { Settings, ShieldCheck, Building2, Lock, Save, CheckCircle2, Image, FileText, Phone, Mail, MapPin, Upload, Trash2, Link, Users, UserPlus, UserCheck, PlusCircle, AlertTriangle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Settings, ShieldCheck, Building2, Lock, Save,
+  CheckCircle2, Phone, MapPin, Upload, Trash2, Link, AlertTriangle
+} from 'lucide-react';
 import { Role, ClinicInfo } from '../types';
-import { getRegisteredUsers, registerClinicUser, deleteRegisteredUser, RegisteredClinicUser } from '../utils/userRegistry';
 
 interface SettingsViewProps {
   currentRole: Role;
-  setCurrentRole: (role: Role) => void;
   clinicInfo: ClinicInfo;
   onUpdateClinicInfo: (info: ClinicInfo) => Promise<boolean>;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   currentRole,
-  setCurrentRole,
   clinicInfo,
-  onUpdateClinicInfo
+  onUpdateClinicInfo,
 }) => {
   const [form, setForm] = useState<ClinicInfo>({ ...clinicInfo });
+  const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [saving, setSaving] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Registered Users Directory State
-  const [registeredUsers, setRegisteredUsers] = useState<RegisteredClinicUser[]>(() => getRegisteredUsers());
-  const [newEmail, setNewEmail] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newRole, setNewRole] = useState<Role>('Doctor');
-  const [userAddedNotice, setUserAddedNotice] = useState('');
+  const isSuperAdmin = currentRole === 'Super Admin';
 
-  // Sync if parent clinicInfo changes (e.g. loaded from Supabase after mount)
-  React.useEffect(() => {
+  // Sync form if clinicInfo loads from Supabase after mount
+  useEffect(() => {
     setForm({ ...clinicInfo });
   }, [clinicInfo]);
-
-  // Role checks — Identity is Super Admin ONLY
-  const isSuperAdmin = currentRole === 'Super Admin';
-  const isAdmin = currentRole === 'Admin' || isSuperAdmin;
-
-  const handleAddRegisteredUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEmail || !newEmail.includes('@')) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-    const updated = registerClinicUser({
-      email: newEmail,
-      name: newName.trim() || newEmail.split('@')[0],
-      role: newRole,
-      department: `${newRole} Department`
-    });
-    setRegisteredUsers(updated);
-    setUserAddedNotice(`Clinic email '${newEmail}' registered with role '${newRole}'!`);
-    setNewEmail('');
-    setNewName('');
-    setTimeout(() => setUserAddedNotice(''), 4000);
-  };
-
-  const handleDeleteUser = (email: string) => {
-    if (confirm(`Remove registered email '${email}'?`)) {
-      const updated = deleteRegisteredUser(email);
-      setRegisteredUsers(updated);
-    }
-  };
 
   const handleChange = (field: keyof ClinicInfo, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -88,16 +53,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (e.target.files?.[0]) handleProcessFile(e.target.files[0]);
   };
 
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
-  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+  const handleDragOver  = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop      = (e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false);
     if (e.dataTransfer.files?.[0]) handleProcessFile(e.dataTransfer.files[0]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSuperAdmin) return; // extra guard
+    if (!isSuperAdmin) return;
     setSaving(true);
     setSaveError('');
     const ok = await onUpdateClinicInfo(form);
@@ -106,240 +71,240 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 4000);
     } else {
-      setSaveError('Save failed. Your account may not have Super Admin privileges in the database, or there was a network error.');
+      setSaveError('Save failed. Your account may not have Super Admin privileges, or there was a network error.');
     }
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
 
-      {/* Header */}
-      <div className="p-6 rounded-3xl bg-slate-900/80 border border-purple-900/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white font-['Poppins'] flex items-center gap-3">
-            <Settings className="w-7 h-7 text-purple-400" /> DentaPlus System Configurations
-          </h1>
-          <p className="text-xs text-slate-300 mt-1">
-            Dental clinic profile, identity badge, role permissions, and system preferences.
-          </p>
-        </div>
-
-        {savedSuccess && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-semibold animate-in fade-in slide-in-from-right duration-300">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Clinic Identity Saved to Database!
+      {/* ── Page Header ─────────────────────────────────────────── */}
+      <div className="p-6 rounded-3xl bg-slate-900/80 border border-purple-900/30">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+              <Settings className="w-7 h-7 text-purple-400" />
+              System Settings
+            </h1>
+            <p className="text-xs text-slate-400 mt-1">
+              Manage your clinic identity and system configuration.
+            </p>
           </div>
-        )}
+          {savedSuccess && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-sm font-semibold animate-in fade-in slide-in-from-right duration-300">
+              <CheckCircle2 className="w-4 h-4" /> Saved successfully
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* ── Main grid ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Clinic & Hospital Identity Form (spans 2 cols) */}
-        <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900/80 border border-purple-900/30 space-y-6">
-          <div className="flex items-center justify-between border-b border-purple-900/30 pb-4">
+        {/* Identity Form — 2 cols */}
+        <div className="lg:col-span-2 rounded-3xl bg-slate-900/80 border border-purple-900/30 overflow-hidden">
+
+          {/* Card header */}
+          <div className="px-6 pt-6 pb-4 border-b border-purple-900/20 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-purple-400" /> Clinic &amp; Hospital Identity
-              </h3>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-purple-400" />
+                Clinic &amp; Hospital Identity
+              </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {isSuperAdmin
-                  ? 'Update clinic name, tagline, address, contact details, and logo. Changes save to the central database.'
-                  : 'Read-only — only Super Admin can edit the clinic identity.'}
+                  ? 'Updates are saved to the database and reflected across all devices instantly.'
+                  : 'View only — only Super Admin can edit clinic identity.'}
               </p>
             </div>
             {!isSuperAdmin && (
-              <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-amber-400" /> Super Admin Only
+              <span className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-950/80 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+                <Lock className="w-3.5 h-3.5" /> Super Admin Only
               </span>
             )}
           </div>
 
+          {/* Error banner */}
           {saveError && (
-            <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
-              <span>{saveError}</span>
+            <div className="mx-6 mt-4 flex items-start gap-2 p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              {saveError}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* All fields disabled unless Super Admin */}
-            <fieldset disabled={!isSuperAdmin} className="space-y-4 disabled:opacity-70">
+          {/* Form body */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <fieldset disabled={!isSuperAdmin} className="space-y-4 disabled:opacity-60">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Clinic Name */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Clinic / Hospital Name *</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Clinic / Hospital Name <span className="text-rose-400">*</span>
+                  </label>
                   <input
-                    type="text" required value={form.name}
-                    onChange={(e) => handleChange('name', e.target.value)}
+                    required type="text" value={form.name}
+                    onChange={e => handleChange('name', e.target.value)}
                     placeholder="e.g. Kathmandu Dental Hospital & Implant Center"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/40 text-white font-bold text-sm focus:outline-none focus:border-[#7C3AED] transition-colors disabled:bg-slate-900 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/40 text-white font-semibold text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* Tagline */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Tagline / Speciality Description</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Tagline / Speciality</label>
                   <input
                     type="text" value={form.tagline}
-                    onChange={(e) => handleChange('tagline', e.target.value)}
+                    onChange={e => handleChange('tagline', e.target.value)}
                     placeholder="e.g. Advanced Dental Care, Orthodontics & Implantology"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-purple-200 text-xs focus:outline-none focus:border-[#7C3AED] disabled:bg-slate-900 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-purple-200 text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* License */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Registration / License No.</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Registration / License No.</label>
                   <input
                     type="text" value={form.licenseCode}
-                    onChange={(e) => handleChange('licenseCode', e.target.value)}
-                    placeholder="e.g. NMC-REG-2026-8891-KTM"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-purple-300 font-mono text-xs focus:outline-none focus:border-[#7C3AED] disabled:bg-slate-900 disabled:cursor-not-allowed"
+                    onChange={e => handleChange('licenseCode', e.target.value)}
+                    placeholder="e.g. NMC-REG-2026-8891"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-cyan-300 font-mono text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* PAN */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">PAN / TAX ID Number</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">PAN / TAX Number</label>
                   <input
                     type="text" value={form.panNumber}
-                    onChange={(e) => handleChange('panNumber', e.target.value)}
+                    onChange={e => handleChange('panNumber', e.target.value)}
                     placeholder="e.g. 609823412"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-amber-300 font-mono text-xs focus:outline-none focus:border-[#7C3AED] disabled:bg-slate-900 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-amber-300 font-mono text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* Address */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Address &amp; Location</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Address</label>
                   <input
                     type="text" value={form.address}
-                    onChange={(e) => handleChange('address', e.target.value)}
+                    onChange={e => handleChange('address', e.target.value)}
                     placeholder="e.g. Lazimpat, Kathmandu, Nepal"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-slate-200 text-xs focus:outline-none focus:border-[#7C3AED] disabled:bg-slate-900 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Contact Phone Number</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Phone</label>
                   <input
                     type="text" value={form.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                    placeholder="e.g. +977 01-4410000"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-emerald-300 text-xs focus:outline-none focus:border-[#7C3AED] disabled:bg-slate-900 disabled:cursor-not-allowed"
+                    onChange={e => handleChange('phone', e.target.value)}
+                    placeholder="+977 01-4410000"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-emerald-300 text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Official Email Address</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Official Email</label>
                   <input
                     type="email" value={form.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder="e.g. info@kathmandudental.com"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-slate-200 text-xs focus:outline-none focus:border-[#7C3AED] disabled:bg-slate-900 disabled:cursor-not-allowed"
+                    onChange={e => handleChange('email', e.target.value)}
+                    placeholder="info@clinic.com"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Established Year */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Established Year</label>
+                  <input
+                    type="text" value={form.establishedYear}
+                    onChange={e => handleChange('establishedYear', e.target.value)}
+                    placeholder="e.g. 2015"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* Logo Upload */}
                 <div className="sm:col-span-2 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold text-slate-300">Clinic Logo Image</label>
+                    <label className="block text-xs font-semibold text-slate-300">Clinic Logo</label>
                     {isSuperAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => setShowUrlInput(!showUrlInput)}
-                        className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium transition-colors"
-                      >
+                      <button type="button" onClick={() => setShowUrlInput(v => !v)}
+                        className="flex items-center gap-1 text-[11px] text-purple-400 hover:text-purple-300 transition-colors">
                         <Link className="w-3 h-3" />
-                        {showUrlInput ? 'Use File Upload' : 'Paste Image URL instead'}
+                        {showUrlInput ? 'Use file upload' : 'Paste URL instead'}
                       </button>
                     )}
                   </div>
 
-                  <input type="file" ref={fileInputRef} accept="image/png, image/jpeg, image/webp, image/svg+xml" className="hidden" onChange={handleFileChange} />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
                   {showUrlInput && isSuperAdmin ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="url" value={form.logoUrl || ''}
-                        onChange={(e) => handleChange('logoUrl', e.target.value)}
-                        placeholder="https://example.com/clinic-logo.png"
-                        className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-slate-200 text-xs focus:outline-none focus:border-[#7C3AED]"
-                      />
-                      {form.logoUrl && (
-                        <button type="button" onClick={() => handleChange('logoUrl', '')}
-                          className="px-3 py-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white text-xs">
-                          Reset
-                        </button>
+                    <input
+                      type="url" value={form.logoUrl}
+                      onChange={e => handleChange('logoUrl', e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-purple-900/30 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                    />
+                  ) : form.logoUrl ? (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-purple-500/20">
+                      <div className="flex items-center gap-3">
+                        <img src={form.logoUrl} alt="Logo" className="w-12 h-12 object-contain rounded-lg bg-slate-900 p-1 border border-purple-500/20" />
+                        <div>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 text-[10px] font-semibold">
+                            <CheckCircle2 className="w-3 h-3" /> Active
+                          </span>
+                          <p className="text-xs text-slate-400 mt-0.5">Logo attached</p>
+                        </div>
+                      </div>
+                      {isSuperAdmin && (
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => fileInputRef.current?.click()}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs font-medium flex items-center gap-1.5 transition-colors">
+                            <Upload className="w-3.5 h-3.5" /> Change
+                          </button>
+                          <button type="button" onClick={() => handleChange('logoUrl', '')}
+                            className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-400 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   ) : (
-                    <div>
-                      {form.logoUrl ? (
-                        <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-purple-500/30 flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <img src={form.logoUrl} alt="Clinic Logo Preview" className="w-14 h-14 object-contain rounded-xl bg-slate-900 p-1 border border-purple-500/30 shadow-md" />
-                            <div>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold">
-                                <CheckCircle2 className="w-3 h-3" /> Active Logo
-                              </span>
-                              <p className="text-xs text-slate-300 mt-1">Logo attached and ready</p>
-                            </div>
-                          </div>
-                          {isSuperAdmin && (
-                            <div className="flex items-center gap-2">
-                              <button type="button" onClick={() => fileInputRef.current?.click()}
-                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white text-xs font-semibold border border-purple-900/30 flex items-center gap-1.5 transition-all">
-                                <Upload className="w-3.5 h-3.5" /> Change
-                              </button>
-                              <button type="button" onClick={() => handleChange('logoUrl', '')}
-                                className="p-2 rounded-xl bg-rose-950/50 hover:bg-rose-900/80 text-rose-400 hover:text-rose-200 border border-rose-500/20 transition-all" title="Remove Logo">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div
-                          onDragOver={isSuperAdmin ? handleDragOver : undefined}
-                          onDragLeave={isSuperAdmin ? handleDragLeave : undefined}
-                          onDrop={isSuperAdmin ? handleDrop : undefined}
-                          onClick={isSuperAdmin ? () => fileInputRef.current?.click() : undefined}
-                          className={`group relative border-2 border-dashed rounded-2xl p-5 text-center transition-all ${
-                            isSuperAdmin ? 'cursor-pointer hover:border-purple-500/60 hover:bg-slate-950' : 'cursor-not-allowed opacity-60'
-                          } ${isDragging ? 'border-[#7C3AED] bg-[#7C3AED]/10 scale-[1.01]' : 'border-purple-900/40 bg-slate-950/60'}`}
-                        >
-                          <div className="flex flex-col items-center justify-center space-y-2">
-                            <div className="w-10 h-10 rounded-xl bg-purple-900/30 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                              <Upload className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-white">
-                                {isSuperAdmin ? <>Click to upload <span className="text-purple-400 font-normal">or drag &amp; drop</span></> : 'Default emblem active'}
-                              </p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WEBP, SVG</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                    <div
+                      onDragOver={isSuperAdmin ? handleDragOver : undefined}
+                      onDragLeave={isSuperAdmin ? handleDragLeave : undefined}
+                      onDrop={isSuperAdmin ? handleDrop : undefined}
+                      onClick={isSuperAdmin ? () => fileInputRef.current?.click() : undefined}
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                        isSuperAdmin ? 'cursor-pointer hover:border-purple-500/50 hover:bg-slate-950' : 'opacity-50 cursor-not-allowed'
+                      } ${isDragging ? 'border-purple-500 bg-purple-950/10' : 'border-purple-900/40'}`}
+                    >
+                      <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2" />
+                      <p className="text-xs text-slate-400">
+                        {isSuperAdmin ? 'Click or drag & drop to upload logo' : 'No logo uploaded'}
+                      </p>
+                      <p className="text-[11px] text-slate-600 mt-0.5">PNG, JPG, SVG, WEBP</p>
                     </div>
                   )}
-                  <p className="text-[10px] text-slate-400">If empty, DentaPlus displays the built-in dental shield emblem automatically.</p>
                 </div>
               </div>
 
-              {/* Save — Super Admin only */}
+              {/* Save button — Super Admin only */}
               {isSuperAdmin && (
-                <div className="pt-3 border-t border-purple-900/30 flex items-center justify-between">
-                  <div className="text-xs text-slate-400">Changes sync across invoices, headers, and reports.</div>
+                <div className="pt-4 border-t border-purple-900/20 flex items-center justify-between">
+                  <p className="text-xs text-slate-500">
+                    Changes sync to the database and are visible across all devices.
+                  </p>
                   <button
-                    type="submit"
-                    disabled={saving}
-                    className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#7C3AED] to-[#9333EA] hover:from-[#6D28D9] hover:to-[#7E22CE] disabled:opacity-60 text-white text-xs font-bold shadow-lg shadow-purple-900/50 border border-purple-400/30 flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+                    type="submit" disabled={saving}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500 disabled:opacity-50 text-white text-sm font-semibold flex items-center gap-2 shadow-lg shadow-purple-900/40 transition-all hover:scale-105 active:scale-95"
                   >
-                    <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Clinic Identity'}
+                    <Save className="w-4 h-4" />
+                    {saving ? 'Saving…' : 'Save Identity'}
                   </button>
                 </div>
               )}
@@ -347,119 +312,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </form>
         </div>
 
-        {/* Right side: Live preview + User management */}
-        <div className="space-y-6">
-
-          {/* Live Identity Badge Preview */}
-          <div className="p-5 rounded-3xl bg-slate-900/80 border border-purple-900/30 space-y-3">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" /> Identity Badge Preview
-            </h4>
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#1E1B4B] via-[#0F172A] to-[#2E1065] border border-purple-500/30 space-y-3">
-              <div className="flex items-center gap-3">
-                {form.logoUrl ? (
-                  <img src={form.logoUrl} alt="Logo" className="w-12 h-12 object-contain rounded-xl bg-slate-900 p-1 border border-purple-400/30" />
-                ) : (
-                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#9333EA] p-2 text-white">
-                    <svg viewBox="0 0 24 24" className="w-full h-full fill-none stroke-current stroke-2">
-                      <path d="M12 4c-3.5 0-6 2-6 5.5 0 2.5 1.2 5 2 7.5.5 1.5 1 3.5 2 3.5s1.2-1.5 2-3.5c.8 2 1.2 3.5 2 3.5s1.5-2 2-3.5c.8-2.5 2-5 2-7.5C18 6 15.5 4 12 4z" fill="rgba(255,255,255,0.2)" />
-                    </svg>
+        {/* Right col — Live Badge Preview */}
+        <div className="space-y-4">
+          <div className="rounded-3xl bg-slate-900/80 border border-purple-900/30 overflow-hidden">
+            <div className="px-5 py-4 border-b border-purple-900/20">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-400" /> Live Preview
+              </h3>
+            </div>
+            <div className="p-5">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#1E1B4B] via-[#0F172A] to-[#2E1065] border border-purple-500/20 space-y-3">
+                {/* Logo + Name */}
+                <div className="flex items-center gap-3">
+                  {form.logoUrl ? (
+                    <img src={form.logoUrl} alt="Logo" className="w-11 h-11 object-contain rounded-xl bg-slate-900 p-1 border border-purple-400/20" />
+                  ) : (
+                    <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 text-white">
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current stroke-2">
+                        <path d="M12 4c-3.5 0-6 2-6 5.5 0 2.5 1.2 5 2 7.5.5 1.5 1 3.5 2 3.5s1.2-1.5 2-3.5c.8 2 1.2 3.5 2 3.5s1.5-2 2-3.5c.8-2.5 2-5 2-7.5C18 6 15.5 4 12 4z" fill="rgba(255,255,255,0.15)" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold text-white truncate">{form.name || 'Clinic Name'}</h4>
+                    <p className="text-[11px] text-purple-300 truncate">{form.tagline || 'Tagline'}</p>
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-bold text-white truncate">{form.name || 'Clinic Name'}</h4>
-                  <p className="text-[11px] text-purple-200 truncate">{form.tagline || 'Tagline'}</p>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-1.5 pt-2 border-t border-purple-900/30 text-[11px] text-slate-300">
+                  {form.address && (
+                    <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-purple-400 shrink-0" /><span className="truncate">{form.address}</span></div>
+                  )}
+                  {form.phone && (
+                    <div className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-emerald-400 shrink-0" /><span>{form.phone}</span></div>
+                  )}
+                  {form.licenseCode && (
+                    <div className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-cyan-400 shrink-0" /><span className="font-mono">{form.licenseCode}</span></div>
+                  )}
+                  {(form.establishedYear) && (
+                    <div className="text-[10px] text-slate-500 pt-1">Est. {form.establishedYear}</div>
+                  )}
                 </div>
               </div>
-              <div className="space-y-1 text-[11px] text-slate-300 pt-2 border-t border-purple-900/40">
-                <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-purple-400 shrink-0" /> <span className="truncate">{form.address || 'Address'}</span></div>
-                <div className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-emerald-400 shrink-0" /> <span>{form.phone || 'Phone'}</span></div>
-                <div className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-cyan-400 shrink-0" /> <span className="font-mono">{form.licenseCode || 'License'}</span></div>
-              </div>
+
+              {!isSuperAdmin && (
+                <p className="mt-3 text-[11px] text-slate-500 text-center flex items-center justify-center gap-1">
+                  <Lock className="w-3 h-3" /> Contact your Super Admin to update clinic identity
+                </p>
+              )}
             </div>
           </div>
-
-          {/* User Management — Admin & Super Admin */}
-          {isAdmin && (
-            <div className="p-6 rounded-3xl bg-slate-900/80 border border-purple-900/30 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Users className="w-4 h-4 text-purple-400" /> Registered Clinic Email Roles
-                </h3>
-                <div className="flex items-center gap-2">
-                  {isSuperAdmin && (
-                    <span className="px-2 py-0.5 rounded-md bg-purple-900/80 text-purple-200 border border-purple-400/40 text-[10px] font-bold">Super Admin</span>
-                  )}
-                  <span className="px-2.5 py-1 rounded-full bg-purple-950 text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
-                    {registeredUsers.length} Mapped
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-400">
-                Map clinic email addresses to access roles. When staff sign in, their integrated role is assigned automatically.
-              </p>
-
-              {userAddedNotice && (
-                <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{userAddedNotice}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleAddRegisteredUser} className="p-4 rounded-2xl bg-slate-950/80 border border-purple-900/40 space-y-3">
-                <div className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
-                  <UserPlus className="w-3.5 h-3.5" /> Register New Staff Email
-                </div>
-                <input type="email" required value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="Clinic Email (e.g. dr.sita@familydental.com.np)"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-purple-900/40 text-xs text-white focus:outline-none focus:border-[#7C3AED]" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Staff Name / Title"
-                    className="px-3 py-2 rounded-xl bg-slate-900 border border-purple-900/40 text-xs text-white focus:outline-none focus:border-[#7C3AED]" />
-                  <select value={newRole} onChange={(e) => setNewRole(e.target.value as Role)}
-                    className="px-3 py-2 rounded-xl bg-slate-900 border border-purple-900/40 text-xs font-semibold text-purple-200 focus:outline-none focus:border-[#7C3AED]">
-                    <option value="Super Admin">Super Admin</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Doctor">Doctor</option>
-                    <option value="Receptionist">Receptionist</option>
-                    <option value="Pharmacist">Pharmacist</option>
-                    <option value="Patient">Patient</option>
-                  </select>
-                </div>
-                <button type="submit"
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white font-bold text-xs shadow-md flex items-center justify-center gap-1.5 hover:opacity-90 transition-all">
-                  <PlusCircle className="w-4 h-4" /> Register &amp; Integrate Role
-                </button>
-              </form>
-
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {registeredUsers.map((u) => (
-                  <div key={u.email} className="p-3 rounded-2xl bg-slate-950/60 border border-purple-900/20 flex items-center justify-between gap-2 text-xs hover:border-purple-500/30 transition-all">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-white truncate">{u.name}</div>
-                      <div className="text-[11px] text-slate-400 truncate">{u.email}</div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border ${
-                        u.role === 'Super Admin' ? 'bg-amber-950/90 text-amber-300 border-amber-500/50' :
-                        u.role === 'Admin' ? 'bg-purple-950/80 text-purple-300 border-purple-500/40' :
-                        u.role === 'Doctor' ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40' :
-                        u.role === 'Receptionist' ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' :
-                        u.role === 'Pharmacist' ? 'bg-amber-950/80 text-amber-300 border-amber-500/40' :
-                        'bg-sky-950/80 text-sky-300 border-sky-500/40'
-                      }`}>{u.role}</span>
-                      <button type="button" onClick={() => handleDeleteUser(u.email)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors" title="Remove Registration">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
