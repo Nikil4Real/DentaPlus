@@ -84,6 +84,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     avatar_url TEXT,
     otp_code TEXT,
     otp_expires_at TIMESTAMPTZ,
+    -- Direct link to the clinic this user belongs to (set on registration)
+    clinic_id UUID REFERENCES public.clinic_info(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -421,6 +423,7 @@ CREATE INDEX IF NOT EXISTS idx_dental_xrays_patient_id ON public.dental_xrays(pa
 CREATE INDEX IF NOT EXISTS idx_invoices_patient_id ON public.invoices(patient_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_number ON public.invoices(invoice_number);
 CREATE INDEX IF NOT EXISTS idx_clinic_info_owner_id ON public.clinic_info(owner_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_clinic_id ON public.profiles(clinic_id);
 
 -- -----------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS) POLICIES FOR SUPABASE

@@ -39,9 +39,18 @@ import { LabDiagnosticsView } from './views/LabDiagnosticsView';
 import { PharmacyView } from './views/PharmacyView';
 import { BillingView } from './views/BillingView';
 import { SettingsView } from './views/SettingsView';
-import { getClinicIdFromEmail, loadClinicData, saveClinicDataField } from './utils/clinicStore';
-import { findUserByEmail } from './utils/userRegistry';
 import { fetchClinicInfoWithId, saveClinicInfo } from './lib/clinicInfoService';
+import {
+  fetchPatients, fetchDoctors, fetchAppointments, fetchLabTests,
+  fetchPharmacy, fetchInvoices, fetchPrescriptions,
+  addPatient, updatePatient,
+  addDoctor, updateDoctor,
+  addAppointment, updateAppointmentStatus as dbUpdateAppointmentStatus,
+  addLabTest,
+  addPharmacyItem, updatePharmacyStock,
+  addInvoice,
+  addPrescription,
+} from './lib/dataService';
 
 export default function App() {
   // Authentication & Login State
@@ -52,98 +61,49 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
-  // Active Clinic Identifier
-  const currentClinicId = currentUser ? getClinicIdFromEmail(currentUser.email) : 'familydental.com.np';
-
-  // Entities Data State
+  // Entities Data State (loaded from Supabase on login)
   const [clinicInfo, setClinicInfo] = useState<ClinicInfo>(DEFAULT_CLINIC_INFO);
   const [clinicInfoRowId, setClinicInfoRowId] = useState<string | undefined>(undefined);
-  const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
-  const [doctors, setDoctors] = useState<Doctor[]>(INITIAL_DOCTORS);
-  const [appointments, setAppointments] = useState<Appointment[]>(INITIAL_APPOINTMENTS);
-  const [labTests, setLabTests] = useState<DentalXRay[]>(INITIAL_LAB_TESTS);
-  const [pharmacy, setPharmacy] = useState<PharmacyItem[]>(INITIAL_PHARMACY);
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [labTests, setLabTests] = useState<DentalXRay[]>([]);
+  const [pharmacy, setPharmacy] = useState<PharmacyItem[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [dataLoading, setDataLoading] = useState<boolean>(false);
 
-  // Load isolated clinic data when user logs in
+  // Load all clinic data from Supabase when user logs in
   useEffect(() => {
-    if (currentUser) {
-      setCurrentRole(currentUser.role);
-      const userRecord = findUserByEmail(currentUser.email);
-      const data = loadClinicData(currentClinicId, userRecord);
-      // Load other entities from localStorage as before
-      setPatients(data.patients);
-      setDoctors(data.doctors);
-      setAppointments(data.appointments);
-      setLabTests(data.labTests);
-      setPharmacy(data.pharmacy);
-      setInvoices(data.invoices);
-      setPrescriptions(data.prescriptions);
-      // Load clinicInfo from Supabase (single source of truth)
-      fetchClinicInfoWithId(currentUser.email).then((result) => {
-        if (result) {
-          setClinicInfo(result.info);
-          setClinicInfoRowId(result.id);
-        } else {
-          // Supabase returned nothing — fall back to localStorage
-          setClinicInfo(data.clinicInfo);
-        }
-      });
-    }
-  }, [currentUser, currentClinicId]);
+    if (!currentUser?.clinicId) return;
+    const clinicId = currentUser.clinicId;
+    setCurrentRole(currentUser.role);
+    setDataLoading(true);
 
-  // clinicInfo is saved explicitly on submit — no reactive localStorage persist needed
-
-  useEffect(() => {
-    if (currentUser) {
-      saveClinicDataField(currentClinicId, 'patients', patients);
-    }
-  }, [patients, currentClinicId, currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      saveClinicDataField(currentClinicId, 'doctors', doctors);
-    }
-  }, [doctors, currentClinicId, currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      saveClinicDataField(currentClinicId, 'appointments', appointments);
-    }
-  }, [appointments, currentClinicId, currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      saveClinicDataField(currentClinicId, 'labTests', labTests);
-    }
-  }, [labTests, currentClinicId, currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      saveClinicDataField(currentClinicId, 'pharmacy', pharmacy);
-    }
-  }, [pharmacy, currentClinicId, currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      saveClinicDataField(currentClinicId, 'invoices', invoices);
-    }
-  }, [invoices, currentClinicId, currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      saveClinicDataField(currentClinicId, 'prescriptions', prescriptions);
-    }
-  }, [prescriptions, currentClinicId, currentUser]);
+    Promise.all([
+      fetchClinicInfoWithId(currentUser.email),
+      fetchPatients(clinicId),
+      fetchDoctors(clinicId),
+      fetchAppointments(clinicId),
+      fetchLabTests(clinicId),
+      fetchPharmacy(clinicId),
+      fetchInvoices(clinicId),
+      fetchPrescriptions(clinicId),
+    ]).then(([clinicResult, pts, drs, appts, labs, pharm, invs, rxs]) => {
+      if (clinicResult) { setClinicInfo(clinicResult.info); setClinicInfoRowId(clinicResult.id); }
+      setPatients(pts);
+      setDoctors(drs);
+      setAppointments(appts);
+      setLabTests(labs);
+      setPharmacy(pharm);
+      setInvoices(invs);
+      setPrescriptions(rxs);
+    }).finally(() => setDataLoading(false));
+  }, [currentUser]);
 
   const handleUpdateClinicInfo = async (updated: ClinicInfo): Promise<boolean> => {
-    const ok = await saveClinicInfo(updated, clinicInfoRowId);
-    if (ok) {
-      setClinicInfo(updated);
-      // Also keep localStorage in sync as fallback
-      if (currentUser) saveClinicDataField(currentClinicId, 'clinicInfo', updated);
-    }
+    const ok = await saveClinicInfo(updated, clinicInfoRowId!);
+    if (ok) setClinicInfo(updated);
     return ok;
   };
 
@@ -174,28 +134,34 @@ export default function App() {
   // Handlers
   const handleAddPatient = (newPatient: Patient) => {
     setPatients((prev) => [newPatient, ...prev]);
+    if (currentUser?.clinicId) addPatient(newPatient, currentUser.clinicId);
   };
 
   const handleAddAppointment = (newAppointment: Appointment) => {
     setAppointments((prev) => [newAppointment, ...prev]);
+    if (currentUser?.clinicId) addAppointment(newAppointment, currentUser.clinicId);
   };
 
   const handleAddPrescription = (newPrescription: Prescription) => {
     setPrescriptions((prev) => [newPrescription, ...prev]);
+    if (currentUser?.clinicId) addPrescription(newPrescription, currentUser.clinicId);
   };
 
   const handleUpdateAppointmentStatus = (id: string, status: Appointment['status']) => {
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status } : a))
     );
+    if (currentUser?.clinicId) dbUpdateAppointmentStatus(id, status, currentUser.clinicId);
   };
 
   const handleSaveDoctor = (savedDoctor: Doctor) => {
     setDoctors((prev) => {
       const exists = prev.some(d => d.id === savedDoctor.id);
       if (exists) {
+        if (currentUser?.clinicId) updateDoctor(savedDoctor, currentUser.clinicId);
         return prev.map(d => d.id === savedDoctor.id ? savedDoctor : d);
       }
+      if (currentUser?.clinicId) addDoctor(savedDoctor, currentUser.clinicId);
       return [savedDoctor, ...prev];
     });
   };
@@ -219,18 +185,16 @@ export default function App() {
 
   const handleAddXRay = (newXRay: DentalXRay) => {
     setLabTests((prev) => [newXRay, ...prev]);
+    if (currentUser?.clinicId) addLabTest(newXRay, currentUser.clinicId);
   };
 
   const handleRestockItem = (id: string, amount: number, newBatch?: string, newExpiry?: string) => {
     setPharmacy((prev) =>
       prev.map((m) => {
         if (m.id === id) {
-          return {
-            ...m,
-            stock: m.stock + amount,
-            batchNumber: newBatch || m.batchNumber,
-            expiryDate: newExpiry || m.expiryDate
-          };
+          const newStock = m.stock + amount;
+          if (currentUser?.clinicId) updatePharmacyStock(id, newStock, currentUser.clinicId);
+          return { ...m, stock: newStock, batchNumber: newBatch || m.batchNumber, expiryDate: newExpiry || m.expiryDate };
         }
         return m;
       })
@@ -239,6 +203,7 @@ export default function App() {
 
   const handleAddNewMedicine = (newItem: PharmacyItem) => {
     setPharmacy((prev) => [newItem, ...prev]);
+    if (currentUser?.clinicId) addPharmacyItem(newItem, currentUser.clinicId);
   };
 
   const handleMarkInvoicePaid = (id: string, paymentMethod: Invoice['paymentMethod']) => {
@@ -251,6 +216,7 @@ export default function App() {
 
   const handleAddInvoice = (newInvoice: Invoice) => {
     setInvoices((prev) => [newInvoice, ...prev]);
+    if (currentUser?.clinicId) addInvoice(newInvoice, currentUser.clinicId);
   };
 
   // Render Login Dashboard if unauthenticated
