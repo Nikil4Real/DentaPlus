@@ -68,6 +68,7 @@ export default function App() {
       })
       .then((user) => {
         if (active && user) {
+          setDataLoading(true);
           setCurrentUser(user);
           setCurrentRole(user.role);
         }
@@ -99,12 +100,29 @@ export default function App() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [dataLoading, setDataLoading] = useState<boolean>(false);
 
-  // Load all clinic data from Supabase when user logs in
+  // Load only the active clinic's data before rendering the workspace.
   useEffect(() => {
-    if (!currentUser?.clinicId) return;
-    const clinicId = currentUser.clinicId;
+    let active = true;
+    const clinicId = currentUser?.clinicId;
+
+    if (!clinicId) {
+      setDataLoading(false);
+      return () => { active = false; };
+    }
+
     setCurrentRole(currentUser.role);
     setDataLoading(true);
+
+    // Clear the previous clinic immediately so it cannot flash during a new request.
+    setClinicInfo(DEFAULT_CLINIC_INFO);
+    setClinicInfoRowId(undefined);
+    setPatients([]);
+    setDoctors([]);
+    setAppointments([]);
+    setLabTests([]);
+    setPharmacy([]);
+    setInvoices([]);
+    setPrescriptions([]);
 
     Promise.all([
       fetchClinicInfoWithId(currentUser.email),
@@ -115,16 +133,27 @@ export default function App() {
       fetchPharmacy(clinicId),
       fetchInvoices(clinicId),
       fetchPrescriptions(clinicId),
-    ]).then(([clinicResult, pts, drs, appts, labs, pharm, invs, rxs]) => {
-      if (clinicResult) { setClinicInfo(clinicResult.info); setClinicInfoRowId(clinicResult.id); }
-      setPatients(pts);
-      setDoctors(drs);
-      setAppointments(appts);
-      setLabTests(labs);
-      setPharmacy(pharm);
-      setInvoices(invs);
-      setPrescriptions(rxs);
-    }).finally(() => setDataLoading(false));
+    ])
+      .then(([clinicResult, pts, drs, appts, labs, pharm, invs, rxs]) => {
+        if (!active) return;
+        setClinicInfo(clinicResult?.info || DEFAULT_CLINIC_INFO);
+        setClinicInfoRowId(clinicResult?.id || undefined);
+        setPatients(pts);
+        setDoctors(drs);
+        setAppointments(appts);
+        setLabTests(labs);
+        setPharmacy(pharm);
+        setInvoices(invs);
+        setPrescriptions(rxs);
+      })
+      .catch((error) => {
+        if (active) console.error('Failed to load clinic workspace data:', error);
+      })
+      .finally(() => {
+        if (active) setDataLoading(false);
+      });
+
+    return () => { active = false; };
   }, [currentUser]);
 
   const handleUpdateClinicInfo = async (updated: ClinicInfo): Promise<boolean> => {
@@ -250,6 +279,7 @@ export default function App() {
       await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
     } finally {
       setCurrentUser(null);
+      setDataLoading(false);
       setPatients([]);
       setDoctors([]);
       setAppointments([]);
@@ -274,10 +304,30 @@ export default function App() {
     return (
       <LoginView
         onLoginSuccess={(user) => {
+          setDataLoading(true);
           setCurrentUser(user);
           setCurrentRole(user.role);
         }}
       />
+    );
+  }
+
+  if (!currentUser.clinicId) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-100 text-slate-700 px-4">
+        <div className="max-w-md rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <h1 className="text-lg font-semibold text-slate-900">Clinic workspace unavailable</h1>
+          <p className="mt-2 text-sm text-slate-600">This account is not linked to a clinic. Please contact the administrator.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-100 text-slate-600">
+        <span className="text-sm">Loading your clinic workspace...</span>
+      </div>
     );
   }
 
