@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { NavLink } from 'react-router-dom';
 
 export type ActiveTab = 
   | 'dashboard' 
@@ -38,15 +39,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setCollapsed
 }) => {
   const menuItems = [
-    { id: 'dashboard' as ActiveTab, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'patients' as ActiveTab, label: 'Patients', icon: Users },
-    { id: 'appointments' as ActiveTab, label: 'Appointments', icon: Calendar },
-    { id: 'doctors' as ActiveTab, label: 'Doctors', icon: UserCheck },
-    { id: 'lab' as ActiveTab, label: 'Dental Radiology', icon: Scan },
-    { id: 'pharmacy' as ActiveTab, label: 'Pharmacy', icon: Pill },
-    { id: 'billing' as ActiveTab, label: 'Billing & Invoices', icon: CreditCard },
-    { id: 'settings' as ActiveTab, label: 'System Settings', icon: Settings },
-  ] as { id: ActiveTab; label: string; icon: any; badge?: string }[];
+    { id: 'dashboard' as ActiveTab, path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'patients' as ActiveTab, path: '/patients', label: 'Patients', icon: Users },
+    { id: 'appointments' as ActiveTab, path: '/appointments', label: 'Appointments', icon: Calendar },
+    { id: 'doctors' as ActiveTab, path: '/doctors', label: 'Doctors', icon: UserCheck },
+    { id: 'lab' as ActiveTab, path: '/diagnostics', label: 'Dental Radiology', icon: Scan },
+    { id: 'pharmacy' as ActiveTab, path: '/inventory', label: 'Pharmacy', icon: Pill },
+    { id: 'billing' as ActiveTab, path: '/billing', label: 'Billing & Invoices', icon: CreditCard },
+    { id: 'settings' as ActiveTab, path: '/settings', label: 'System Settings', icon: Settings },
+  ] as { id: ActiveTab; path: string; label: string; icon: any; badge?: string }[];
 
   return (
     <aside 
@@ -84,9 +85,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const isActive = activeTab === item.id;
 
             return (
-              <button
+              <NavLink
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                to={item.path}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl font-medium text-sm transition-all duration-200 group relative ${
                   isActive
                     ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-lg shadow-purple-900/50 border border-purple-400/30 font-semibold'
@@ -122,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {isActive && (
                   <span className="absolute left-0 top-2 bottom-2 w-1 bg-purple-300 rounded-r-full shadow-glow" />
                 )}
-              </button>
+              </NavLink>
             );
           })}
         </nav>

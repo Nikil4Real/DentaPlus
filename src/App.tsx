@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Patient, 
   Appointment, 
@@ -85,8 +86,34 @@ export default function App() {
 
   // Global Workspace State
   const [currentRole, setCurrentRole] = useState<Role>('Admin');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const routeToTab: Record<string, ActiveTab> = {
+    '/dashboard': 'dashboard',
+    '/patients': 'patients',
+    '/appointments': 'appointments',
+    '/doctors': 'doctors',
+    '/diagnostics': 'lab',
+    '/inventory': 'pharmacy',
+    '/billing': 'billing',
+    '/settings': 'settings',
+  };
+  const activeTab = routeToTab[location.pathname] || 'dashboard';
+  const navigateToTab = (tab: ActiveTab) => {
+    const tabToRoute: Record<ActiveTab, string> = {
+      dashboard: '/dashboard',
+      patients: '/patients',
+      appointments: '/appointments',
+      doctors: '/doctors',
+      lab: '/diagnostics',
+      pharmacy: '/inventory',
+      billing: '/billing',
+      settings: '/settings',
+    };
+    navigate(tabToRoute[tab]);
+  };
 
   // Entities Data State (loaded from Supabase on login)
   const [clinicInfo, setClinicInfo] = useState<ClinicInfo>(DEFAULT_CLINIC_INFO);
@@ -337,7 +364,7 @@ export default function App() {
       {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateToTab}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
       />
@@ -352,7 +379,7 @@ export default function App() {
         onOpenSearch={() => setIsSearchOpen(true)}
         collapsed={collapsed}
         onLogout={handleLogout}
-        onNavigateToSettings={() => setActiveTab('settings')}
+        onNavigateToSettings={() => navigateToTab('settings')}
       />
 
       {/* Main View Area */}
@@ -362,92 +389,87 @@ export default function App() {
         }`}
       >
         <div className="max-w-7xl mx-auto w-full min-w-0">
-          {activeTab === 'dashboard' && (
-            <DashboardView
-              patients={patients}
-              appointments={appointments}
-              doctors={doctors}
-              labTests={labTests}
-              pharmacy={pharmacy}
-              clinicInfo={clinicInfo}
-              onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-              onSelectPatient={(p) => setSelectedPatientForDetails(p)}
-              onNavigateTab={(tab) => setActiveTab(tab)}
-            />
-          )}
-
-
-          {activeTab === 'patients' && (
-            <PatientsView
-              patients={patients}
-              onSelectPatient={(p) => setSelectedPatientForDetails(p)}
-              onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-              onOpenFollowUp={(p) => {
-                setFollowUpPatient(p || null);
-                setIsFollowUpOpen(true);
-              }}
-            />
-          )}
-
-          {activeTab === 'appointments' && (
-            <AppointmentsView
-              appointments={appointments}
-              patients={patients}
-              doctors={doctors}
-              onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-              onUpdateAppointmentStatus={handleUpdateAppointmentStatus}
-            />
-          )}
-
-          {activeTab === 'doctors' && (
-            <DoctorsView
-              doctors={doctors}
-              onToggleDoctorStatus={handleToggleDoctorStatus}
-              onOpenAddDoctor={() => {
-                setDoctorToEdit(null);
-                setIsDoctorModalOpen(true);
-              }}
-              onEditDoctor={(doc) => {
-                setDoctorToEdit(doc);
-                setIsDoctorModalOpen(true);
-              }}
-            />
-          )}
-
-          {activeTab === 'lab' && (
-            <LabDiagnosticsView
-              labTests={labTests}
-              patients={patients}
-              onAddXRay={handleAddXRay}
-            />
-          )}
-
-          {activeTab === 'pharmacy' && (
-            <PharmacyView
-              pharmacy={pharmacy}
-              onRestockItem={handleRestockItem}
-              onAddNewMedicine={handleAddNewMedicine}
-            />
-          )}
-
-          {activeTab === 'billing' && (
-            <BillingView
-              invoices={invoices}
-              patients={patients}
-              doctors={doctors}
-              onMarkPaid={handleMarkInvoicePaid}
-              onAddInvoice={handleAddInvoice}
-            />
-          )}
-
-          {activeTab === 'settings' && (
-            <SettingsView
-              currentRole={currentRole}
-              clinicInfo={clinicInfo}
-              onUpdateClinicInfo={handleUpdateClinicInfo}
-            />
-          )}
-
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={
+              <DashboardView
+                patients={patients}
+                appointments={appointments}
+                doctors={doctors}
+                labTests={labTests}
+                pharmacy={pharmacy}
+                clinicInfo={clinicInfo}
+                onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+                onSelectPatient={(p) => setSelectedPatientForDetails(p)}
+                onNavigateTab={(tab) => navigateToTab(tab as ActiveTab)}
+              />
+            } />
+            <Route path="/patients" element={
+              <PatientsView
+                patients={patients}
+                onSelectPatient={(p) => setSelectedPatientForDetails(p)}
+                onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+                onOpenFollowUp={(p) => {
+                  setFollowUpPatient(p || null);
+                  setIsFollowUpOpen(true);
+                }}
+              />
+            } />
+            <Route path="/appointments" element={
+              <AppointmentsView
+                appointments={appointments}
+                patients={patients}
+                doctors={doctors}
+                onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+                onUpdateAppointmentStatus={handleUpdateAppointmentStatus}
+              />
+            } />
+            <Route path="/doctors" element={
+              <DoctorsView
+                doctors={doctors}
+                onToggleDoctorStatus={handleToggleDoctorStatus}
+                onOpenAddDoctor={() => {
+                  setDoctorToEdit(null);
+                  setIsDoctorModalOpen(true);
+                }}
+                onEditDoctor={(doc) => {
+                  setDoctorToEdit(doc);
+                  setIsDoctorModalOpen(true);
+                }}
+              />
+            } />
+            <Route path="/diagnostics" element={
+              <LabDiagnosticsView
+                labTests={labTests}
+                patients={patients}
+                onAddXRay={handleAddXRay}
+              />
+            } />
+            <Route path="/inventory" element={
+              <PharmacyView
+                pharmacy={pharmacy}
+                onRestockItem={handleRestockItem}
+                onAddNewMedicine={handleAddNewMedicine}
+              />
+            } />
+            <Route path="/billing" element={
+              <BillingView
+                invoices={invoices}
+                patients={patients}
+                doctors={doctors}
+                onMarkPaid={handleMarkInvoicePaid}
+                onAddInvoice={handleAddInvoice}
+              />
+            } />
+            <Route path="/settings" element={
+              <SettingsView
+                currentRole={currentRole}
+                clinicInfo={clinicInfo}
+                onUpdateClinicInfo={handleUpdateClinicInfo}
+              />
+            } />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
         </div>
       </main>
 
