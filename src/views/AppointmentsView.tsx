@@ -11,10 +11,11 @@ import {
   CalendarCheck,
   Filter
 } from 'lucide-react';
-import { Appointment, Doctor } from '../types';
+import {   Appointment, Doctor, Patient } from '../types';
 
 interface AppointmentsViewProps {
   appointments: Appointment[];
+  patients: Patient[];
   doctors: Doctor[];
   onOpenQuickAdd: () => void;
   onUpdateAppointmentStatus: (id: string, status: Appointment['status']) => void;
@@ -22,6 +23,7 @@ interface AppointmentsViewProps {
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   appointments,
+  patients,
   doctors,
   onOpenQuickAdd,
   onUpdateAppointmentStatus
@@ -30,6 +32,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   const [dateMode, setDateMode] = useState<'date' | 'all'>('date');
   const [customDate, setCustomDate] = useState<string>(todayStr);
   const [filterType, setFilterType] = useState<string>('All');
+
+  const recentPatients = [...patients]
+    .sort((a, b) => b.registeredDate.localeCompare(a.registeredDate))
+    .slice(0, 5);
+  const upcomingFollowUps = appointments
+    .filter(a => a.type === 'Follow-up' && a.date >= todayStr && a.status !== 'Completed' && a.status !== 'Cancelled')
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+    .slice(0, 5);
 
   const filteredAppointments = appointments.filter(a => {
     // Date filter
@@ -129,6 +139,67 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               {cat}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-purple-900/30">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-sm font-bold text-white">Recently Registered Patients</h2>
+              <p className="text-[11px] text-slate-400">New patient records from this clinic</p>
+            </div>
+            <span className="text-[11px] font-semibold text-purple-300">{patients.length} total</span>
+          </div>
+          {recentPatients.length > 0 ? (
+            <div className="space-y-2">
+              {recentPatients.map((patient) => (
+                <div key={patient.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/60 border border-purple-900/20 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{patient.name}</p>
+                    <p className="text-[10px] text-slate-400">{patient.registrationNumber} • {patient.department}</p>
+                  </div>
+                  <span className="text-[10px] text-emerald-300 whitespace-nowrap">{patient.registeredDate}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-4 text-center text-xs text-slate-500">No registered patients yet.</p>
+          )}
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-purple-900/30">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-sm font-bold text-white">Upcoming Follow-ups</h2>
+              <p className="text-[11px] text-slate-400">Next scheduled visits for existing patients</p>
+            </div>
+            <span className="text-[11px] font-semibold text-emerald-300">{upcomingFollowUps.length} shown</span>
+          </div>
+          {upcomingFollowUps.length > 0 ? (
+            <div className="space-y-2">
+              {upcomingFollowUps.map((appointment) => (
+                <button
+                  key={appointment.id}
+                  type="button"
+                  onClick={() => {
+                    setCustomDate(appointment.date);
+                    setDateMode('date');
+                    setFilterType('Follow-up');
+                  }}
+                  className="w-full flex items-center justify-between gap-3 text-left rounded-xl bg-slate-950/60 border border-purple-900/20 px-3 py-2.5 hover:border-purple-500/50 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{appointment.patientName}</p>
+                    <p className="text-[10px] text-purple-300">{appointment.doctorName} • {appointment.time}</p>
+                  </div>
+                  <span className="text-[10px] text-emerald-300 whitespace-nowrap">{appointment.date}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="py-4 text-center text-xs text-slate-500">No upcoming follow-ups scheduled.</p>
+          )}
         </div>
       </div>
 

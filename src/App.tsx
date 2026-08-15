@@ -392,6 +392,7 @@ export default function App() {
           {activeTab === 'appointments' && (
             <AppointmentsView
               appointments={appointments}
+              patients={patients}
               doctors={doctors}
               onOpenQuickAdd={() => setIsQuickAddOpen(true)}
               onUpdateAppointmentStatus={handleUpdateAppointmentStatus}
