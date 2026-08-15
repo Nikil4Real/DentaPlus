@@ -55,6 +55,32 @@ import {
 export default function App() {
   // Authentication & Login State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authChecking, setAuthChecking] = useState<boolean>(true);
+
+  // Restore the httpOnly browser-session cookie after refresh.
+  useEffect(() => {
+    let active = true;
+    fetch('/api/session', { credentials: 'same-origin' })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = await response.json().catch(() => null);
+        return data?.success ? (data.user as AuthUser) : null;
+      })
+      .then((user) => {
+        if (active && user) {
+          setCurrentUser(user);
+          setCurrentRole(user.role);
+        }
+      })
+      .catch(() => {
+        // A missing or expired session simply leaves the login screen available.
+      })
+      .finally(() => {
+        if (active) setAuthChecking(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   // Global Workspace State
   const [currentRole, setCurrentRole] = useState<Role>('Admin');
@@ -219,6 +245,30 @@ export default function App() {
     if (currentUser?.clinicId) addInvoice(newInvoice, currentUser.clinicId);
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+    } finally {
+      setCurrentUser(null);
+      setPatients([]);
+      setDoctors([]);
+      setAppointments([]);
+      setLabTests([]);
+      setPharmacy([]);
+      setInvoices([]);
+      setPrescriptions([]);
+    }
+  };
+
+  // Avoid flashing the login form while the browser-session cookie is restored.
+  if (authChecking) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-100 text-slate-600">
+        <span className="text-sm">Restoring your session...</span>
+      </div>
+    );
+  }
+
   // Render Login Dashboard if unauthenticated
   if (!currentUser) {
     return (
@@ -251,7 +301,7 @@ export default function App() {
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenSearch={() => setIsSearchOpen(true)}
         collapsed={collapsed}
-        onLogout={() => setCurrentUser(null)}
+        onLogout={handleLogout}
         onNavigateToSettings={() => setActiveTab('settings')}
       />
 
