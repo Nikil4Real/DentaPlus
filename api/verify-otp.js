@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   try {
     const { data: user, error: findError } = await supabaseAdmin
       .from('profiles')
-      .select('id, name, email, role, otp_code, otp_expires_at')
+      .select('id, name, email, role, clinic_id, otp_code, otp_expires_at')
       .eq('email', email)
       .eq('is_active', true)
       .maybeSingle();
@@ -59,6 +59,7 @@ export default async function handler(req, res) {
       name: user.name,
       email: user.email,
       role: user.role || 'Admin',
+      clinicId: user.clinic_id || null,
     };
 
     const token = signSession(sessionUser);

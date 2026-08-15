@@ -151,6 +151,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
+  clinicId?: string | null;
   department?: string;
   avatarUrl?: string;
 }
